@@ -19,17 +19,17 @@ builder.Services.AddHostedService<LifecycleService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// caching require authentication services as well
 if (Config.CACHE_SIZE_IN_MB > 0)
 {
     builder.Services.AddSingleton<ICache, InMemoryCache>();
+    builder.Services.AddSingleton<ITokenValidator, AzureAdTokenValidator>();
+    builder.Services
+        .AddAuthentication("default")
+        .AddScheme<AuthOptions, AuthHandler>("multi-auth", o => { });
 }
 
-builder.Services.AddSingleton<ITokenValidator, AzureAdTokenValidator>();
-builder.Services
-    .AddAuthentication("default")
-    .AddScheme<AuthOptions, AuthHandler>("multi-auth", o => { });
-
-builder.Services.AddSingleton<ICredentials, LocalCredentials>();
+builder.Services.AddSingleton<ICredentials, EnvironmentVariableCredentials>();
 builder.Services.AddHttpClient();
 builder.Services.AddControllers();
 

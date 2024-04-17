@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using Xunit.Sdk;
 
 public class OboMiddleware(
     RequestDelegate next,
@@ -99,11 +98,14 @@ public class OboMiddleware(
 
         using var client = this.httpClientFactory.CreateClient();
         using var response = await client.SendAsync(request);
-        response.EnsureSuccessStatusCode();
 
         var responseContent = await response.Content.ReadAsStringAsync();
-        using var doc = JsonDocument.Parse(responseContent);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new Exception($"{response.StatusCode}: {responseContent}");
+        }
 
+        using var doc = JsonDocument.Parse(responseContent);
         if (!doc.RootElement.TryGetProperty("access_token", out var accessTokenElement))
         {
             throw new Exception("no access_token was not found in the OBO token response.");
@@ -125,9 +127,7 @@ public class OboMiddleware(
             var origToken = authHeader.FirstOrDefault()?.Replace("Bearer ", "", StringComparison.InvariantCultureIgnoreCase);
             if (origToken is null)
             {
-                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                await context.Response.WriteAsync("You must provide a Bearer Token in the Authorization header.");
-                return;
+                throw new HttpException(401, "You must provide a Bearer Token in the Authorization header.");
             }
 
             // decode the JWT
@@ -137,9 +137,7 @@ public class OboMiddleware(
             // get the tenant id
             if (!unvalJwt.Payload.TryGetString("tid", out var tenantId))
             {
-                context.Response.StatusCode = StatusCodes.Status403Forbidden;
-                await context.Response.WriteAsync("You must provide a Bearer Token that contains the tid element.");
-                return;
+                throw new HttpException(403, "You must provide a Bearer Token that contains the tid element.");
             }
 
             // get the obo token
@@ -149,6 +147,13 @@ public class OboMiddleware(
 
             // set the obo token
             context.Items.Add("obo-token", oboToken);
+        }
+        catch (HttpException ex)
+        {
+            this.logger.LogError(ex, "exception in obo middleware...");
+            context.Response.StatusCode = ex.StatusCode;
+            await context.Response.WriteAsync(ex.Message);
+            return;
         }
         catch (Exception ex)
         {
