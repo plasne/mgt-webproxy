@@ -92,13 +92,18 @@ public class SubscriptionsController(
     {
         try
         {
+            // get the obo token
             var oboToken = this.GetOboToken();
-            using var httpClient = this.httpClientFactory.CreateClient();
+            if (oboToken is null)
+            {
+                return StatusCode(403, "Forbidden - a bearer token that can be exchanged for an on-behalf-of token to Microsoft Graph must be presented.");
+            }
 
             // create the subscription
             this.logger.LogDebug("attempting to renew subscription...");
+            using var httpClient = this.httpClientFactory.CreateClient();
             string requestBody = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
-            var subscription = await this.RenewSubscription(httpClient, subscriptionId, requestBody, oboToken!);
+            var subscription = await this.RenewSubscription(httpClient, subscriptionId, requestBody, oboToken);
             this.logger.LogInformation("successfully renewed subscription.");
 
             // return similar payload to create, but without negotate
@@ -112,7 +117,7 @@ public class SubscriptionsController(
         }
         catch (Exception ex)
         {
-            this.logger.LogError(ex.Message);
+            this.logger.LogError(ex, "renew subscription exception...");
             return StatusCode(500, "Internal server error.");
         }
     }
@@ -122,18 +127,23 @@ public class SubscriptionsController(
     {
         try
         {
+            // get the obo token
             var oboToken = this.GetOboToken();
-            using var httpClient = this.httpClientFactory.CreateClient();
+            if (oboToken is null)
+            {
+                return StatusCode(403, "Forbidden - a bearer token that can be exchanged for an on-behalf-of token to Microsoft Graph must be presented.");
+            }
 
             // create the subscription
             this.logger.LogDebug("attempting to create subscription...");
+            using var httpClient = this.httpClientFactory.CreateClient();
             string requestBody = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
-            var subscription = await this.CreateSubscription(httpClient, requestBody, oboToken!);
+            var subscription = await this.CreateSubscription(httpClient, requestBody, oboToken);
             this.logger.LogInformation("successfully created subscription.");
 
             // negotiate with the notification endpoint
             this.logger.LogDebug("attempting to negotiate Signal-R endpoint...");
-            var negotiate = await this.Negotiate(httpClient, (string)subscription.notificationUrl, oboToken!);
+            var negotiate = await this.Negotiate(httpClient, (string)subscription.notificationUrl, oboToken);
             this.logger.LogInformation("successfully negotiated Signal-R endpoint.");
 
             // return the full payload
@@ -147,7 +157,7 @@ public class SubscriptionsController(
         }
         catch (Exception ex)
         {
-            this.logger.LogError(ex.Message);
+            this.logger.LogError(ex, "create subscription exception...");
             return StatusCode(500, "Internal server error.");
         }
     }

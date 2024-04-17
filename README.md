@@ -9,3 +9,11 @@ Create an .env file with the following (or use any other way to set Environmenta
 - __CLIENT_ID__ [STRING, REQUIRED]: The Client ID used for LocalCredentials. This is ONLY suitable for a single tenant solution.
 
 - __CLIENT_SECRET__ [STRING, REQUIRED]: The Client Secret used for LocalCredentials. This is ONLY suitable for a single tenant solution.
+
+## TODO
+
+- Add KeyVault implementation
+
+## on hiding errors 500
+
+# re: audience
