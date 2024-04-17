@@ -5,8 +5,22 @@
   <script src="https://alcdn.msauth.net/browser/2.30.0/js/msal-browser.js"
     integrity="sha384-o4ufwq3oKqc7IoCcR08YtZXmgOljhTggRwxP2CLbSqeXGtitAxwYaUln/05nJjit"
     crossorigin="anonymous"></script>
-  <script type="text/javascript" src="./authConfig.js"></script>
-  <script type="text/javascript" src="./authPopup.js"></script>
+  <script lang="js">
+    fetch('config.json')
+      .then(response => response.json())
+      .then(msalConfig => {
+        const auth = new msal.PublicClientApplication(msalConfig);
+        auth.acquireTokenPopup(msalConfig).then(
+          (response) => {
+            document.getElementById("access-token").innerText = response.accessToken;
+          },
+          (error) => {
+            console.error(error);
+          }
+        );
+      })
+      .catch(error => console.error('Error:', error));
+  </script>
 </head>
 
 <body>

@@ -1,0 +1,14 @@
+{
+  "auth": {
+    "clientId": "???",
+    "authority": "https://login.microsoftonline.com/???",
+    "redirectUri": "http://localhost:5000"
+  },
+  "cache": {
+    "cacheLocation": "sessionStorage",
+    "storeAuthStateInCookie": false
+  },
+  "scopes": [
+    "api://???/API.All"
+  ]
+}

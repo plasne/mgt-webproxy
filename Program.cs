@@ -6,17 +6,22 @@ using dotenv.net;
 using Microsoft.AspNetCore.Hosting;
 using Azure.Identity;
 
+// load .env
 DotEnv.Load();
 
+// create the builder
 var builder = WebApplication.CreateBuilder(args);
 
+// setup only the single line console logger
 builder.Logging.ClearProviders();
-
 builder.Services.AddSingleLineConsoleLogger();
+
+// setup config
 builder.Services.AddConfig();
 builder.Services.AddSingleton<IConfig, Config>();
 builder.Services.AddHostedService<LifecycleService>();
 
+// add swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -47,6 +52,7 @@ builder.Services.AddSingleton<ICredentials>(provider =>
     }
 });
 
+// add controllers
 builder.Services.AddHttpClient();
 builder.Services.AddControllers();
 
@@ -56,16 +62,25 @@ builder.WebHost.UseKestrel(options =>
     options.ListenAnyIP(Config.PORT);
 });
 
+// build
 var app = builder.Build();
 
+// use swagger
 app.UseSwagger();
 app.UseSwaggerUI();
 
-app.UseStaticFiles();
+// host the web site if appropriate
+if (Config.HOST_TEST_SITE)
+{
+    app.UseStaticFiles();
+}
 
+// use routing
 app.UseRouting();
 
+// setup middleware and controllers
 app.UseMiddleware<OboMiddleware>();
 app.MapControllers();
 
+// run
 app.Run();

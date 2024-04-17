@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -18,17 +19,21 @@ public class SubscriptionsController(
     private readonly IHttpClientFactory httpClientFactory = httpClientFactory;
     private readonly ILogger<SubscriptionsController> logger = logger;
 
-    private string? GetOboToken()
+    private string GetOboToken()
     {
-        if (HttpContext.Items.TryGetValue("obo-token", out object? oboToken))
+        if (HttpContext.Items.TryGetValue("obo-token", out object? obj))
         {
-            return oboToken as string;
+            var oboToken = obj as string;
+            if (oboToken is not null)
+            {
+                return oboToken;
+            }
         }
 
-        return null;
+        throw new HttpException(403, "Forbidden - a bearer token that can be exchanged for an on-behalf-of token to Microsoft Graph must be presented.");
     }
 
-    private async Task<dynamic> CreateSubscription(HttpClient client, string payload, string accessToken)
+    private static async Task<dynamic> CreateSubscription(HttpClient client, string payload, string accessToken)
     {
         string url = "https://graph.microsoft.com/v1.0/subscriptions";
         using var request = new HttpRequestMessage(HttpMethod.Post, url);
@@ -38,7 +43,11 @@ public class SubscriptionsController(
 
         using var response = await client.SendAsync(request);
         var responseContent = await response.Content.ReadAsStringAsync();
-        if (!response.IsSuccessStatusCode)
+        if (response.StatusCode == HttpStatusCode.BadRequest)
+        {
+            throw new HttpException(400, responseContent);
+        }
+        else if (!response.IsSuccessStatusCode)
         {
             throw new Exception($"{response.StatusCode}: {responseContent}");
         }
@@ -46,7 +55,7 @@ public class SubscriptionsController(
         return JsonConvert.DeserializeObject<dynamic>(responseContent);
     }
 
-    private async Task<dynamic> RenewSubscription(HttpClient client, string subscriptionId, string payload, string accessToken)
+    private static async Task<dynamic> RenewSubscription(HttpClient client, string subscriptionId, string payload, string accessToken)
     {
         string url = $"https://graph.microsoft.com/v1.0/subscriptions/{subscriptionId}";
         using var request = new HttpRequestMessage(HttpMethod.Patch, url);
@@ -56,15 +65,24 @@ public class SubscriptionsController(
 
         using var response = await client.SendAsync(request);
         var responseContent = await response.Content.ReadAsStringAsync();
-        if (!response.IsSuccessStatusCode)
+
+        Console.WriteLine("status code :" + response.StatusCode);
+
+        if (response.StatusCode == HttpStatusCode.BadRequest)
         {
+            Console.WriteLine("HTTPException");
+            throw new HttpException(400, responseContent);
+        }
+        else if (!response.IsSuccessStatusCode)
+        {
+            Console.WriteLine("Exception");
             throw new Exception($"{response.StatusCode}: {responseContent}");
         }
 
         return JsonConvert.DeserializeObject<dynamic>(responseContent);
     }
 
-    private async Task<dynamic> Negotiate(HttpClient client, string notificationUrl, string accessToken)
+    private static async Task<dynamic> Negotiate(HttpClient client, string notificationUrl, string accessToken)
     {
         var url = notificationUrl
             .Replace("websockets:", "")
@@ -94,16 +112,12 @@ public class SubscriptionsController(
         {
             // get the obo token
             var oboToken = this.GetOboToken();
-            if (oboToken is null)
-            {
-                return StatusCode(403, "Forbidden - a bearer token that can be exchanged for an on-behalf-of token to Microsoft Graph must be presented.");
-            }
 
             // create the subscription
             this.logger.LogDebug("attempting to renew subscription...");
             using var httpClient = this.httpClientFactory.CreateClient();
             string requestBody = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
-            var subscription = await this.RenewSubscription(httpClient, subscriptionId, requestBody, oboToken);
+            var subscription = await RenewSubscription(httpClient, subscriptionId, requestBody, oboToken);
             this.logger.LogInformation("successfully renewed subscription.");
 
             // return similar payload to create, but without negotate
@@ -114,6 +128,10 @@ public class SubscriptionsController(
                 ContentType = "application/json",
                 StatusCode = 200
             };
+        }
+        catch (HttpException ex)
+        {
+            return StatusCode(ex.StatusCode, ex.Message);
         }
         catch (Exception ex)
         {
@@ -129,21 +147,17 @@ public class SubscriptionsController(
         {
             // get the obo token
             var oboToken = this.GetOboToken();
-            if (oboToken is null)
-            {
-                return StatusCode(403, "Forbidden - a bearer token that can be exchanged for an on-behalf-of token to Microsoft Graph must be presented.");
-            }
 
             // create the subscription
             this.logger.LogDebug("attempting to create subscription...");
             using var httpClient = this.httpClientFactory.CreateClient();
             string requestBody = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
-            var subscription = await this.CreateSubscription(httpClient, requestBody, oboToken);
+            var subscription = await CreateSubscription(httpClient, requestBody, oboToken);
             this.logger.LogInformation("successfully created subscription.");
 
             // negotiate with the notification endpoint
             this.logger.LogDebug("attempting to negotiate Signal-R endpoint...");
-            var negotiate = await this.Negotiate(httpClient, (string)subscription.notificationUrl, oboToken);
+            var negotiate = await Negotiate(httpClient, (string)subscription.notificationUrl, oboToken);
             this.logger.LogInformation("successfully negotiated Signal-R endpoint.");
 
             // return the full payload
@@ -154,6 +168,10 @@ public class SubscriptionsController(
                 ContentType = "application/json",
                 StatusCode = 200
             };
+        }
+        catch (HttpException ex)
+        {
+            return StatusCode(ex.StatusCode, ex.Message);
         }
         catch (Exception ex)
         {

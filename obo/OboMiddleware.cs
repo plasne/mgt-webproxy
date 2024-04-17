@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -102,7 +103,11 @@ public class OboMiddleware(
         using var response = await client.SendAsync(request);
 
         var responseContent = await response.Content.ReadAsStringAsync();
-        if (!response.IsSuccessStatusCode)
+        if (response.StatusCode == HttpStatusCode.BadRequest)
+        {
+            throw new HttpException(400, responseContent);
+        }
+        else if (!response.IsSuccessStatusCode)
         {
             throw new Exception($"{response.StatusCode}: {responseContent}");
         }
@@ -152,7 +157,6 @@ public class OboMiddleware(
         }
         catch (HttpException ex)
         {
-            this.logger.LogError(ex, "exception in obo middleware...");
             context.Response.StatusCode = ex.StatusCode;
             await context.Response.WriteAsync(ex.Message);
             return;
