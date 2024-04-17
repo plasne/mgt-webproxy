@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using NetBricks;
 using dotenv.net;
 using Microsoft.AspNetCore.Hosting;
+using Azure.Identity;
 
 DotEnv.Load();
 
@@ -19,7 +20,7 @@ builder.Services.AddHostedService<LifecycleService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// caching require authentication services as well
+// add all caching services
 if (Config.CACHE_SIZE_IN_MB > 0)
 {
     builder.Services.AddSingleton<ICache, InMemoryCache>();
@@ -29,7 +30,23 @@ if (Config.CACHE_SIZE_IN_MB > 0)
         .AddScheme<AuthOptions, AuthHandler>("multi-auth", o => { });
 }
 
-builder.Services.AddSingleton<ICredentials, EnvironmentVariableCredentials>();
+// add appropriate credential service
+builder.Services.AddDefaultAzureCredential();
+builder.Services.AddSingleton<ICredentials>(provider =>
+{
+    var config = provider.GetService<IConfig>();
+    if (string.IsNullOrEmpty(config!.KEYVAULT_URL))
+    {
+        return new EnvironmentVariableCredentials();
+    }
+    else
+    {
+        var dftAzure = provider.GetService<DefaultAzureCredential>();
+        var logger = provider.GetService<ILogger<KeyVaultCredentials>>();
+        return new KeyVaultCredentials(config, dftAzure!, logger!);
+    }
+});
+
 builder.Services.AddHttpClient();
 builder.Services.AddControllers();
 

@@ -81,7 +81,7 @@ public class OboMiddleware(
     {
         this.logger.LogDebug("attempting to get OBO token from Azure...");
 
-        var (clientId, clientSecret) = this.credentials.GetForTenant(tenantId);
+        var (clientId, clientSecret) = await this.credentials.GetForTenant(tenantId);
         string url = $"https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/token";
         using var request = new HttpRequestMessage(HttpMethod.Post, url);
         var collection = new List<KeyValuePair<string, string>>

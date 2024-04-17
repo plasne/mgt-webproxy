@@ -1,4 +1,6 @@
+using System.Threading.Tasks;
+
 public interface ICredentials
 {
-    (string clientId, string clientSecret) GetForTenant(string tenantId);
+    Task<(string clientId, string clientSecret)> GetForTenant(string tenantId);
 }

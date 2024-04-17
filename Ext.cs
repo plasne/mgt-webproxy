@@ -1,4 +1,9 @@
+using System;
 using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
+using Azure.Identity;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 public static class Ext
 {
@@ -39,4 +44,36 @@ public static class Ext
         return true;
     }
 
+    public static void AddDefaultAzureCredential(this IServiceCollection services)
+    {
+        services.AddSingleton(
+            provider =>
+            {
+                // get the list of credential options
+                var config = provider.GetService<IConfig>();
+                string[] include = (config?.INCLUDE_CREDENTIAL_TYPES.Length > 0)
+                    ? config.INCLUDE_CREDENTIAL_TYPES :
+                    string.Equals(Config.ASPNETCORE_ENVIRONMENT, "Development", StringComparison.InvariantCultureIgnoreCase)
+                        ? ["azcli", "env"]
+                        : ["env", "mi"];
+
+                // log
+                var factory = provider.GetService<ILoggerFactory>();
+                var logger = factory?.CreateLogger("AddDefaultAzureCredential");
+                logger?.LogDebug("azure authentication will include: {list}", string.Join(", ", include));
+
+                // build the credential object
+                return new DefaultAzureCredential(
+                    new DefaultAzureCredentialOptions()
+                    {
+                        ExcludeEnvironmentCredential = !include.Contains("env"),
+                        ExcludeManagedIdentityCredential = !include.Contains("mi"),
+                        ExcludeSharedTokenCacheCredential = !include.Contains("token"),
+                        ExcludeVisualStudioCredential = !include.Contains("vs"),
+                        ExcludeVisualStudioCodeCredential = !include.Contains("vscode"),
+                        ExcludeAzureCliCredential = !include.Contains("azcli"),
+                        ExcludeInteractiveBrowserCredential = !include.Contains("browser"),
+                    });
+            });
+    }
 }
