@@ -58,7 +58,7 @@ public class AzureAdTokenValidator(ILogger<AzureAdTokenValidator> logger) : ITok
             RequireSignedTokens = true,
             ValidateIssuer = true,
             ValidIssuers = issuers,
-            ValidateAudience = false,
+            ValidateAudience = false, // see README.md
             ValidateLifetime = true,
             IssuerSigningKeys = config.SigningKeys
         };

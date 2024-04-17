@@ -4,5 +4,7 @@ public interface IConfig
 
     public string KEYVAULT_URL { get; }
 
+    public string SCOPE { get; }
+
     void Validate();
 }

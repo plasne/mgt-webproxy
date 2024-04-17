@@ -11,12 +11,14 @@ using Microsoft.Extensions.Logging;
 
 public class OboMiddleware(
     RequestDelegate next,
+    IConfig config,
     IHttpClientFactory httpClientFactory,
     ICredentials credentials,
     ILogger<OboMiddleware> logger,
     ICache? cache = null)
 {
     private readonly RequestDelegate next = next;
+    private readonly IConfig config = config;
     private readonly IHttpClientFactory httpClientFactory = httpClientFactory;
     private readonly ICredentials credentials = credentials;
     private readonly ILogger<OboMiddleware> logger = logger;
@@ -90,7 +92,7 @@ public class OboMiddleware(
                 new("client_id", clientId),
                 new("client_secret", clientSecret),
                 new("assertion", origToken),
-                new("scope", "https://graph.microsoft.com/chat.read"),
+                new("scope", this.config.SCOPE),
                 new("requested_token_use", "on_behalf_of")
             };
         using var content = new FormUrlEncodedContent(collection);
