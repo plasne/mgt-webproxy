@@ -41,7 +41,8 @@ public class KeyVaultCredentials(
             }
             catch (Exception ex)
             {
-                throw ex;
+                this.logger.LogError(ex, "failed to get CLIENT_ID and CLIENT_SECRET from {key}...", this.config.KEYVAULT_URL);
+                throw new HttpException(403, "You are not authorized to use this application.");
             }
         });
     }
