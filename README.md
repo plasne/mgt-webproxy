@@ -143,6 +143,8 @@ __Create an .env file__ with the following (or use any other way to set Environm
 
     You can find out more about the requirements for each of the login types by going to <https://learn.microsoft.com/en-us/dotnet/api/azure.identity.defaultazurecredential?view=azure-dotnet> and clicking on the appropriate login type. For example, if you are using `env` will need to create an application registration and provide environment variables for AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET.
 
+    If the proxy and the Key Vault are running in Azure in the same tenant, the preferred authentication mechanism is "mi".
+
 - __KEYVAULT_URL__ [STRING, OPTIONAL]: To use a Key Vault to store CLIENT_IDs and CLIENT_SECRETs, you need to supply a Key Vault URL (ex. <https://pelasne-keyvault-2.vault.azure.net/>).
 
 - __SCOPE__ [STRING, DEFAULT: https://graph.microsoft.com/chat.read]: This determines the permission (or permissions) that are required for obtaining the OBO access token. For MGT, this should generally be one of two things, <https://graph.microsoft.com/chat.read> or <https://graph.microsoft.com/chat.readwrite> as those are the permissions required to obtain the /users/{id}/chats/getAllMessages subscription. See [Create Subscriptions](https://learn.microsoft.com/en-us/graph/api/subscription-post-subscriptions?view=graph-rest-1.0&tabs=http) for more details.
