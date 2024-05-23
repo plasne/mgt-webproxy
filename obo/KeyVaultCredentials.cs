@@ -20,23 +20,30 @@ public class KeyVaultCredentials(
     {
         return this.cache.GetOrCreateAsync(tenantId, async entry =>
         {
-            this.logger.LogDebug("attempting to get CLIENT_ID and CLIENT_SECRET from {key}...", this.config.KEYVAULT_URL);
-
-            var client = new SecretClient(new Uri(this.config.KEYVAULT_URL), this.credential);
-            var clientIdTask = client.GetSecretAsync($"{tenantId}-CLIENT-ID");
-            var clientSecretTask = client.GetSecretAsync($"{tenantId}-CLIENT-SECRET");
-            await Task.WhenAll(clientIdTask, clientSecretTask);
-
-            var clientId = clientIdTask.Result.Value.Value;
-            var clientSecret = clientSecretTask.Result.Value.Value;
-
-            if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+            try
             {
+                this.logger.LogDebug("attempting to get CLIENT_ID and CLIENT_SECRET from {key}...", this.config.KEYVAULT_URL);
+
+                var client = new SecretClient(new Uri(this.config.KEYVAULT_URL), this.credential);
+                var clientIdTask = client.GetSecretAsync($"{tenantId}-CLIENT-ID");
+                var clientSecretTask = client.GetSecretAsync($"{tenantId}-CLIENT-SECRET");
+                await Task.WhenAll(clientIdTask, clientSecretTask);
+
+                var clientId = clientIdTask.Result.Value.Value;
+                var clientSecret = clientSecretTask.Result.Value.Value;
+
+                if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+                {
+                    throw new HttpException(403, "You are not authorized to use this application.");
+                }
+                this.logger.LogDebug("successfully obtained CLIENT_ID and CLIENT_SECRET from {key}.", this.config.KEYVAULT_URL);
+                return (clientId, clientSecret);
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogError(ex, "failed to get CLIENT_ID and CLIENT_SECRET from {key}...", this.config.KEYVAULT_URL);
                 throw new HttpException(403, "You are not authorized to use this application.");
             }
-
-            this.logger.LogDebug("successfully obtained CLIENT_ID and CLIENT_SECRET from {key}.", this.config.KEYVAULT_URL);
-            return (clientId, clientSecret);
         });
     }
 }

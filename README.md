@@ -131,7 +131,7 @@ You can access the website by going to <http://localhost:5000/default.html>. You
 
 ## Config
 
-Create an .env file with the following (or use any other way to set Environmental Variables):
+__Create an .env file__ with the following (or use any other way to set Environmental Variables):
 
 - __ASPNETCORE_ENVIRONMENT__ [STRING, OPTIONAL]: If set to "Development", "azcli" and "env" are used for the INCLUDE_CREDENTIAL_TYPES default. Otherwise, it uses "env" and "mi".
 
@@ -140,6 +140,10 @@ Create an .env file with the following (or use any other way to set Environmenta
 - __CACHE_SIZE_IN_MB__ [INT, DEFAULT: 0]: If set above zero, a cache will be used for the OBO access tokens. This will reduce some of the traffic on Azure AD and improve latency (at the cost of additional memory).
 
 - __INCLUDE_CREDENTIAL_TYPES__ [STRING, DEFAULT: varies]: If you intend to use Key Vault for CLIENT_IDs and CLIENT_SECRETs, you need to authenticate to Key Vault. This setting is a comma-delimited list of all credential types to try. It can include any of the following: "env" (Environment Variables), "mi" (Managed Identity), "token" (Shared Token Cache), "vs" (Visual Studio), "vscode" (Visual Studio Code), "azcli" (Azure CLI), and "browser". You can find out more details on those options in the documentation for `DefaultAzureCredential`. You should select as few options as possible (preferrably one) as each option will have to timeout to move to the next and it can make connections to Key Vault take minutes.
+
+    You can find out more about the requirements for each of the login types by going to <https://learn.microsoft.com/en-us/dotnet/api/azure.identity.defaultazurecredential?view=azure-dotnet> and clicking on the appropriate login type. For example, if you are using `env` will need to create an application registration and provide environment variables for AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET.
+
+    If the proxy and the Key Vault are running in Azure in the same tenant, the preferred authentication mechanism is "mi".
 
 - __KEYVAULT_URL__ [STRING, OPTIONAL]: To use a Key Vault to store CLIENT_IDs and CLIENT_SECRETs, you need to supply a Key Vault URL (ex. <https://pelasne-keyvault-2.vault.azure.net/>).
 

@@ -66,16 +66,12 @@ public class SubscriptionsController(
         using var response = await client.SendAsync(request);
         var responseContent = await response.Content.ReadAsStringAsync();
 
-        Console.WriteLine("status code :" + response.StatusCode);
-
         if (response.StatusCode == HttpStatusCode.BadRequest)
         {
-            Console.WriteLine("HTTPException");
             throw new HttpException(400, responseContent);
         }
         else if (!response.IsSuccessStatusCode)
         {
-            Console.WriteLine("Exception");
             throw new Exception($"{response.StatusCode}: {responseContent}");
         }
 
